@@ -1,80 +1,39 @@
-const express = require("express");
-let books = require("./booksdb.js");
-let isValid = require("./auth_users.js").isValid;
-let users = require("./auth_users.js").users;
-const public_users = express.Router();
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const session = require('express-session');
+const customer_routes = require('./router/auth_users.js').authenticated;
+const genl_routes = require('./router/general.js').general;
 
-public_users.post("/register", (req, res) => {
-  //Write your code here
-  return res.status(300).json({ message: "Yet to be implemented" });
-});
+const app = express();
 
-// Get the book list available in the shop
-public_users.get("/", function (req, res) {
-  res.json(books);
-});
+app.use(express.json());
 
-// Get book details based on ISBN
-public_users.get('/isbn/:id', function (req, res) {
-    const id = req.params.id;
-  
-    // Check if the book exists
-    if (books[id]) {
-      res.json(books[id]);
-    } else {
-      res.status(404).json({ message: "Book not found" });
-    }
-  });
+app.use("/customer", session({
+  secret: "fingerprint_customer",
+  resave: true,
+  saveUninitialized: true
+}));
 
-// Get book details based on author
-public_users.get('/author/:author', function (req, res) {
-  const author = req.params.author;
-  const matchingBooks = [];
+app.use("/customer/auth/*", function auth(req, res, next) {
+  const token = req.session.token;
 
-  // Iterate through the books and find books by the author
-  for (const key in books) {
-    if (books[key].author === author) {
-      matchingBooks.push(books[key]);
-    }
+  if (!token) {
+    return res.status(403).send("A token is required for authentication");
   }
 
-  // Check if any books were found
-  if (matchingBooks.length > 0) {
-    res.json(matchingBooks);
-  } else {
-    res.status(404).json({ message: "No books found by this author" });
+  try {
+    const decoded = jwt.verify(token, "your_jwt_secret_key");
+    req.user = decoded;
+  } catch (err) {
+    return res.status(401).send("Invalid Token");
   }
+
+  return next();
 });
-// Get all books based on title
-public_users.get('/title/:title', function (req, res) {
-    const title = req.params.title;
-    const matchingBooks = [];
-  
-    // Iterate through the books and find books by the title
-    for (const key in books) {
-      if (books[key].title === title) {
-        matchingBooks.push(books[key]);
-      }
-    }
-  
-    // Check if any books were found
-    if (matchingBooks.length > 0) {
-      res.json(matchingBooks);
-    } else {
-      res.status(404).json({ message: "No books found with this title" });
-    }
-  });
 
-//  Get book review
-public_users.get('/review/:isbn', function (req, res) {
-    const isbn = req.params.isbn;
-  
-    // Check if the book exists
-    if (books[isbn]) {
-      res.json(books[isbn].reviews);
-    } else {
-      res.status(404).json({ message: "Book not found" });
-    }
-  });
+const PORT = 5000;
 
-module.exports.general = public_users;
+app.use("/customer", customer_routes);
+app.use("/", genl_routes);
+
+app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));

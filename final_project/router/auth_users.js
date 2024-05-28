@@ -62,11 +62,13 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
     return res.status(400).json({ message: "Review is required" });
   }
 
-  const token = req.session.token;
+  const authHeader = req.headers.authorization;
 
-  if (!token) {
+  if (!authHeader) {
     return res.status(403).json({ message: "A token is required for authentication" });
   }
+
+  const token = authHeader.split(' ')[1];
 
   try {
     const decoded = jwt.verify(token, "your_jwt_secret_key");
