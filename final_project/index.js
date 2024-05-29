@@ -8,6 +8,22 @@ const app = express();
 
 app.use(express.json());
 
+// Get the list of books available in the shop
+public_users.get('/', function (req, res) {
+    res.json(books);
+});
+
+// Get book details based on ISBN
+public_users.get('/isbn/:isbn', function (req, res) {
+    const isbn = req.params.isbn;
+    const book = books[isbn];
+    if (book) {
+        res.json(book);
+    } else {
+        res.status(404).json({ message: "Book not found" });
+    }
+});
+
 app.use("/customer", session({
   secret: "fingerprint_customer",
   resave: true,
